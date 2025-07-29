@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YOLO Object Detection</title>
+    
+    <!-- External CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- Custom CSS -->
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --secondary-color: #1e40af;
+            --success-color: #059669;
+            --danger-color: #dc2626;
+            --warning-color: #d97706;
+            --info-color: #0891b2;
+            --light-color: #f8fafc;
+            --dark-color: #1e293b;
+            --border-color: #e2e8f0;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --border-radius: 8px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+        .header {
+            background: var(--primary-color);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            padding: 30px;
+        }
+
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            background: var(--light-color);
+        }
+
+        .section h3 {
+            color: var(--dark-color);
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .status-success {
+            background: #dcfce7;
+            color: var(--success-color);
+        }
+
+        .status-warning {
+            background: #fef3c7;
+            color: var(--warning-color);
+        }
+
+        .status-error {
+            background: #fecaca;
+            color: var(--danger-color);
+        }
+
+        .model-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .model-card {
+            border: 2px solid var(--border-color);
+            border-radius: var(--border-radius);
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: white;
+        }
+
+        .model-card:hover {
+            border-color: var(--primary-color);
+            transform: translateY(-2px);
+        }
+
+        .model-card.selected {
+            border-color: var(--primary-color);
+            background: #eff6ff;
+        }
+
+        .model-card h4 {
+            color: var(--dark-color);
+            margin-bottom: 5px;
+        }
+
+        .model-card p {
+            color: #6b7280;
+            font-size: 0.9rem;
+            margin-bottom: 5px;
+        }
+
+        .model-card .size {
+            color: var(--info-color);
+            font-weight: 500;
+            font-size: 0.8rem;
+        }
+
+        .upload-area {
+            border: 2px dashed var(--border-color);
+            border-radius: var(--border-radius);
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: white;
+        }
+
+        .upload-area:hover {
+            border-color: var(--primary-color);
+            background: #eff6ff;
+        }
+
+        .upload-area.dragover {
+            border-color: var(--primary-color);
+            background: #eff6ff;
+            transform: scale(1.02);
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            color: var(--primary-color);
+            margin-bottom: 15px;
+        }
+
+        .upload-text {
+            font-size: 1.1rem;
+            color: var(--dark-color);
+            margin-bottom: 10px;
+        }
+
+        .upload-hint {
+            color: #6b7280;
+            font-size: 0.9rem;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: var(--border-radius);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--secondary-color);
+        }
+
+        .btn-success {
+            background: var(--success-color);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #6b7280;
+            color: white;
+        }
+
+        .preview-section {
+            margin-top: 20px;
+        }
+
+        .preview-image {
+            max-width: 100%;
+            max-height: 400px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-top: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .results-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .result-image {
+            max-width: 100%;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+        }
+
+        .predictions-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .prediction-item {
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            padding: 15px;
+            margin-bottom: 10px;
+        }
+
+        .prediction-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .class-name {
+            font-weight: 600;
+            color: var(--dark-color);
+        }
+
+        .confidence {
+            background: var(--success-color);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+        }
+
+        .prediction-details {
+            color: #6b7280;
+            font-size: 0.9rem;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .metric-card {
+            background: white;
+            padding: 20px;
+            border-radius: var(--border-radius);
+            text-align: center;
+            box-shadow: var(--shadow);
+        }
+
+        .metric-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+
+        .metric-label {
+            color: #6b7280;
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .loading {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .spinner {
+            border: 2px solid #f3f4f6;
+            border-top: 2px solid var(--primary-color);
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .alert {
+            padding: 12px 16px;
+            border-radius: var(--border-radius);
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .alert-success {
+            background: #dcfce7;
+            color: var(--success-color);
+            border: 1px solid #bbf7d0;
+        }
+
+        .alert-error {
+            background: #fecaca;
+            color: var(--danger-color);
+            border: 1px solid #fca5a5;
+        }
+
+        .alert-info {
+            background: #dbeafe;
+            color: var(--info-color);
+            border: 1px solid #93c5fd;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1><i class="fas fa-eye"></i> YOLO Object Detection</h1>
+            <p>Phát hiện đối tượng trong hình ảnh với công nghệ AI tiên tiến</p>
+        </div>
+
+        <div class="main-content">
+            <!-- Connection Status -->
+            <div class="section">
+                <div id="connectionStatus" class="status-indicator status-warning">
+                    <div class="spinner"></div>
+                    Đang kết nối...
+                </div>
+            </div>
+
+            <!-- Model Selection -->
+            <div class="section">
+                <h3><i class="fas fa-brain"></i> Chọn Model</h3>
+                
+                <div id="modelGrid" class="model-grid">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        Đang tải danh sách model...
+                    </div>
+                </div>
+                
+                <button id="loadModelBtn" class="btn btn-primary" disabled>
+                    <i class="fas fa-download"></i>
+                    Tải Model
+                </button>
+                
+                <div id="modelStatus"></div>
+            </div>
+
+            <!-- Upload Section -->
+            <div class="section">
+                <h3><i class="fas fa-upload"></i> Tải lên hình ảnh</h3>
+                
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-icon">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                    </div>
+                    <div class="upload-text">
+                        Kéo thả hình ảnh vào đây hoặc click để chọn
+                    </div>
+                    <div class="upload-hint">
+                        Hỗ trợ: JPG, PNG, GIF, BMP, WebP (Tối đa: 16MB)
+                    </div>
+                </div>
+                <input type="file" id="fileInput" accept="image/*" style="display: none;">
+            </div>
+
+            <!-- Preview Section -->
+            <div id="previewSection" class="section hidden">
+                <h3><i class="fas fa-image"></i> Xem trước</h3>
+                <img id="previewImage" class="preview-image" alt="Preview">
+                
+                <div style="margin-top: 20px;">
+                    <button id="detectBtn" class="btn btn-success">
+                        <i class="fas fa-search"></i>
+                        Phát hiện đối tượng
+                    </button>
+                    <button id="cancelBtn" class="btn btn-secondary">
+                        <i class="fas fa-times"></i>
+                        Hủy
+                    </button>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            <div id="resultsSection" class="section hidden">
+                <h3><i class="fas fa-chart-bar"></i> Kết quả phát hiện</h3>
+                
+                <!-- Metrics -->
+                <div id="metricsGrid" class="metrics-grid">
+                    <!-- Metrics will be populated here -->
+                </div>
+                
+                <!-- Results -->
+                <div class="results-grid">
+                    <div>
+                        <h4><i class="fas fa-image"></i> Hình ảnh kết quả</h4>
+                        <img id="resultImage" class="result-image" alt="Result">
+                    </div>
+                    
+                    <div>
+                        <h4><i class="fas fa-list"></i> Chi tiết phát hiện</h4>
+                        <div id="predictionsList" class="predictions-list">
+                            <!-- Predictions will be populated here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class YOLOApp {
+            constructor() {
+                this.selectedModel = null;
+                this.currentFile = null;
+                this.isConnected = false;
+                this.isModelLoaded = false;
+                
+                this.initElements();
+                this.initEventListeners();
+                this.checkConnection();
+                this.loadModels();
+            }
+            
+            initElements() {
+                this.connectionStatus = document.getElementById('connectionStatus');
+                this.modelGrid = document.getElementById('modelGrid');
+                this.loadModelBtn = document.getElementById('loadModelBtn');
+                this.modelStatus = document.getElementById('modelStatus');
+                this.uploadArea = document.getElementById('uploadArea');
+                this.fileInput = document.getElementById('fileInput');
+                this.previewSection = document.getElementById('previewSection');
+                this.previewImage = document.getElementById('previewImage');
+                this.detectBtn = document.getElementById('detectBtn');
+                this.cancelBtn = document.getElementById('cancelBtn');
+                this.resultsSection = document.getElementById('resultsSection');
+                this.metricsGrid = document.getElementById('metricsGrid');
+                this.resultImage = document.getElementById('resultImage');
+                this.predictionsList = document.getElementById('predictionsList');
+            }
+            
+            initEventListeners() {
+                // Upload area events
+                this.uploadArea.addEventListener('click', () => this.fileInput.click());
+                this.uploadArea.addEventListener('dragover', this.handleDragOver.bind(this));
+                this.uploadArea.addEventListener('dragleave', this.handleDragLeave.bind(this));
+                this.uploadArea.addEventListener('drop', this.handleDrop.bind(this));
+                
+                // File input
+                this.fileInput.addEventListener('change', this.handleFileSelect.bind(this));
+                
+                // Buttons
+                this.loadModelBtn.addEventListener('click', this.loadSelectedModel.bind(this));
+                this.detectBtn.addEventListener('click', this.runDetection.bind(this));
+                this.cancelBtn.addEventListener('click', this.cancelPreview.bind(this));
+            }
+            
+            async checkConnection() {
+                try {
+                    const response = await fetch('/api/health');
+                    const data = await response.json();
+                    
+                    this.isConnected = true;
+                    this.isModelLoaded = data.model_loaded;
+                    
+                    this.connectionStatus.className = 'status-indicator status-success';
+                    this.connectionStatus.innerHTML = '<i class="fas fa-check-circle"></i> Kết nối thành công';
+                    
+                    if (data.model_loaded) {
+                        this.showModelStatus(`Model đã tải: ${data.current_model}`, 'success');
+                    }
+                    
+                } catch (error) {
+                    this.isConnected = false;
+                    this.connectionStatus.className = 'status-indicator status-error';
+                    this.connectionStatus.innerHTML = '<i class="fas fa-exclamation-circle"></i> Lỗi kết nối';
+                }
+            }
+            
+            async loadModels() {
+                try {
+                    const response = await fetch('/api/models');
+                    const data = await response.json();
+                    
+                    this.renderModels(data.models);
+                    
+                } catch (error) {
+                    this.modelGrid.innerHTML = `
+                        <div class="alert alert-error">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            Lỗi tải danh sách model
+                        </div>
+                    `;
+                }
+            }
+            
+            renderModels(models) {
+                const modelsConfig = {
+                    yolov8n: { name: "YOLOv8 Nano", desc: "Nhanh nhất, nhỏ nhất", size: "6.2MB" },
+                    yolov8s: { name: "YOLOv8 Small", desc: "Cân bằng tốc độ và độ chính xác", size: "21.5MB" },
+                    yolov8m: { name: "YOLOv8 Medium", desc: "Độ chính xác cao hơn", size: "49.7MB" },
+                    yolov8l: { name: "YOLOv8 Large", desc: "Độ chính xác rất cao", size: "83.7MB" }
+                };
+                
+                this.modelGrid.innerHTML = models.map(model => {
+                    const config = modelsConfig[model.name] || { name: model.name, desc: "", size: "N/A" };
+                    return `
+                        <div class="model-card" data-model="${model.name}">
+                            <h4>${config.name}</h4>
+                            <p>${config.desc}</p>
+                            <div class="size">${config.size}</div>
+                            ${!model.exists ? '<small style="color: var(--warning-color);">Chưa tải xuống</small>' : ''}
+                        </div>
+                    `;
+                }).join('');
+                
+                // Add click handlers
+                document.querySelectorAll('.model-card').forEach(card => {
+                    card.addEventListener('click', () => {
+                        document.querySelectorAll('.model-card').forEach(c => c.classList.remove('selected'));
+                        card.classList.add('selected');
+                        this.selectedModel = card.dataset.model;
+                        this.loadModelBtn.disabled = false;
+                    });
+                });
+            }
+            
+            async loadSelectedModel() {
+                if (!this.selectedModel) return;
+                
+                this.loadModelBtn.innerHTML = '<div class="loading"><div class="spinner"></div>Đang tải...</div>';
+                this.loadModelBtn.disabled = true;
+                
+                try {
+                    const response = await fetch('/api/switch_model', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ model_name: this.selectedModel })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        this.isModelLoaded = true;
+                        this.showModelStatus(data.message, 'success');
+                    } else {
+                        this.showModelStatus(data.error, 'error');
+                    }
+                    
+                } catch (error) {
+                    this.showModelStatus('Lỗi tải model: ' + error.message, 'error');
+                } finally {
+                    this.loadModelBtn.innerHTML = '<i class="fas fa-download"></i> Tải Model';
+                    this.loadModelBtn.disabled = false;
+                }
+            }
+            
+            showModelStatus(message, type) {
+                const alertClass = type === 'success' ? 'alert-success' : type === 'error' ? 'alert-error' : 'alert-info';
+                const icon = type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-triangle' : 'info-circle';
+                
+                this.modelStatus.innerHTML = `
+                    <div class="alert ${alertClass}">
+                        <i class="fas fa-${icon}"></i>
+                        ${message}
+                    </div>
+                `;
+            }
+            
+            handleDragOver(e) {
+                e.preventDefault();
+                this.uploadArea.classList.add('dragover');
+            }
+            
+            handleDragLeave(e) {
+                e.preventDefault();
+                this.uploadArea.classList.remove('dragover');
+            }
+            
+            handleDrop(e) {
+                e.preventDefault();
+                this.uploadArea.classList.remove('dragover');
+                
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    this.handleFile(files[0]);
+                }
+            }
+            
+            handleFileSelect(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    this.handleFile(file);
+                }
+            }
+            
+            handleFile(file) {
+                // Validate file
+                const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/bmp', 'image/webp'];
+                if (!allowedTypes.includes(file.type)) {
+                    alert('Loại file không được hỗ trợ!');
+                    return;
+                }
+                
+                if (file.size > 16 * 1024 * 1024) {
+                    alert('File quá lớn! Tối đa 16MB.');
+                    return;
+                }
+                
+                this.currentFile = file;
+                
+                // Show preview
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    this.previewImage.src = e.target.result;
+                    this.previewSection.classList.remove('hidden');
+                    this.resultsSection.classList.add('hidden');
+                };
+                reader.readAsDataURL(file);
+            }
+            
+            cancelPreview() {
+                this.previewSection.classList.add('hidden');
+                this.resultsSection.classList.add('hidden');
+                this.currentFile = null;
+                this.fileInput.value = '';
+            }
+            
+            async runDetection() {
+                if (!this.currentFile || !this.isModelLoaded) {
+                    alert('Vui lòng chọn file và tải model trước!');
+                    return;
+                }
+                
+                this.detectBtn.innerHTML = '<div class="loading"><div class="spinner"></div>Đang phân tích...</div>';
+                this.detectBtn.disabled = true;
+                
+                const formData = new FormData();
+                formData.append('file', this.currentFile);
+                formData.append('confidence', '0.25');
+                formData.append('iou', '0.45');
+                
+                try {
+                    const response = await fetch('/api/predict', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        console.log('Detection response:', data); // Debug log
+                        this.displayResults(data);
+                    } else {
+                        console.error('Detection failed:', data.error);
+                        alert('Lỗi phát hiện: ' + (data.error || 'Unknown error'));
+                    }
+                    
+                } catch (error) {
+                    console.error('Connection error:', error);
+                    alert('Lỗi kết nối: ' + error.message);
+                } finally {
+                    this.detectBtn.innerHTML = '<i class="fas fa-search"></i> Phát hiện đối tượng';
+                    this.detectBtn.disabled = false;
+                }
+            }
+            
+            displayResults(data) {
+                // Show results section
+                this.resultsSection.classList.remove('hidden');
+                
+                // Display metrics with error handling
+                try {
+                    const stats = data.stats || {};
+                    this.metricsGrid.innerHTML = `
+                        <div class="metric-card">
+                            <div class="metric-value">${stats.total_objects || 0}</div>
+                            <div class="metric-label">Đối tượng</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value">${(stats.classes_detected || []).length}</div>
+                            <div class="metric-label">Loại</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value">${stats.avg_confidence ? (stats.avg_confidence * 100).toFixed(1) : 0}%</div>
+                            <div class="metric-label">Độ tin cậy TB</div>
+                        </div>
+                    `;
+                } catch (e) {
+                    console.error('Error displaying metrics:', e);
+                    this.metricsGrid.innerHTML = `
+                        <div class="alert alert-error">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            Lỗi hiển thị thống kê
+                        </div>
+                    `;
+                }
+                
+                // Display result image
+                if (data.result_image) {
+                    this.resultImage.src = data.result_image;
+                } else {
+                    console.error('No result image in response');
+                }
+                
+                // Display predictions with error handling
+                try {
+                    const predictions = data.predictions || [];
+                    if (predictions.length === 0) {
+                        this.predictionsList.innerHTML = `
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle"></i>
+                                Không phát hiện đối tượng nào
+                            </div>
+                        `;
+                    } else {
+                        this.predictionsList.innerHTML = predictions.map((pred, index) => `
+                            <div class="prediction-item">
+                                <div class="prediction-header">
+                                    <span class="class-name">${pred.class || 'Unknown'}</span>
+                                    <span class="confidence">${pred.confidence ? (pred.confidence * 100).toFixed(1) : 0}%</span>
+                                </div>
+                                <div class="prediction-details">
+                                    Vị trí: (${(pred.bbox && pred.bbox[0]) ? pred.bbox[0].toFixed(0) : 0}, ${(pred.bbox && pred.bbox[1]) ? pred.bbox[1].toFixed(0) : 0}) - 
+                                    Kích thước: ${pred.width ? pred.width.toFixed(0) : 0}×${pred.height ? pred.height.toFixed(0) : 0}
+                                </div>
+                            </div>
+                        `).join('');
+                    }
+                } catch (e) {
+                    console.error('Error displaying predictions:', e);
+                    this.predictionsList.innerHTML = `
+                        <div class="alert alert-error">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            Lỗi hiển thị danh sách đối tượng
+                        </div>
+                    `;
+                }
+            }
+        }
+        
+        // Initialize app when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new YOLOApp();
+        });
+    </script>
+</body>
+</html>

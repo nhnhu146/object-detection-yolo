@@ -1,0 +1,43 @@
+# YOLO Object Detection Web App - Requirement 1
+# Files to ignore in git
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# App-generated folders
+uploads/
+results/
+weights/
+
+# Model files (large)
+*.pt
+*.pth
+*.onnx
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
