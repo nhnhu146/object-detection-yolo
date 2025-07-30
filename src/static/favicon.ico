@@ -1,0 +1,9 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script>
+        // Redirect to SVG favicon as ICO
+        window.location.href = '/static/favicon.svg';
+    </script>
+</head>
+</html>

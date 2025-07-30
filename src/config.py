@@ -8,39 +8,27 @@ class Config:
     # Application settings
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'yolo-webapp-secret-key'
     
-    # Model configuration - Using YOLOv8 available models
+    # Model configuration - YOLOv8s and custom trained model
     MODELS_DIR = "weights"
-    DEFAULT_MODEL = "yolov8n"  # Default to fastest model
+    DEFAULT_MODEL = "yolov8s"  # Default to YOLOv8s pre-trained model
     
-    # Available YOLOv8 models (Requirement 1: using available models)
+    # Available models (Requirement 1: using available models)
     AVAILABLE_MODELS = {
-        "yolov8n": {
-            "name": "YOLOv8 Nano",
-            "file": "yolov8n.pt",
-            "description": "Fastest model - Good for real-time detection",
-            "size": "6.2MB",
-            "speed": "Very Fast"
-        },
         "yolov8s": {
             "name": "YOLOv8 Small", 
             "file": "yolov8s.pt",
-            "description": "Balanced speed and accuracy",
+            "description": "Pre-trained model - Balanced speed and accuracy",
             "size": "21.5MB",
-            "speed": "Fast"
+            "speed": "Fast",
+            "type": "pretrained"
         },
-        "yolov8m": {
-            "name": "YOLOv8 Medium",
-            "file": "yolov8m.pt", 
-            "description": "Higher accuracy - Better for detailed detection",
-            "size": "49.7MB",
-            "speed": "Medium"
-        },
-        "yolov8l": {
-            "name": "YOLOv8 Large",
-            "file": "yolov8l.pt",
-            "description": "Highest accuracy - Best detection quality",
-            "size": "83.7MB",
-            "speed": "Slower"
+        "custom_trained": {
+            "name": "Custom Trained Model",
+            "file": "custom_model.pt",
+            "description": "Custom trained model - Specialized for specific objects",
+            "size": "TBD",
+            "speed": "Fast",
+            "type": "custom"
         }
     }
     

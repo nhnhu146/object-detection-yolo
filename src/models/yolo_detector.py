@@ -18,7 +18,7 @@ class YOLODetector:
     YOLO object detection class - Requirement 1 Implementation
     
     Features:
-    - Uses available YOLOv8 models (yolov8n, yolov8s, yolov8m, yolov8l)
+    - Uses YOLOv8s pre-trained model and custom trained model
     - Model loads only once and reused for all detections
     - Web interface compatible
     """
@@ -29,13 +29,13 @@ class YOLODetector:
         self.class_names = []
         self.is_model_loaded = False
     
-    def load_model(self, model_name="yolov8n"):
+    def load_model(self, model_name="yolov8s"):
         """
         Load YOLO model once and reuse for all detections
         This follows the requirement: "model load only one time"
         
         Args:
-            model_name (str): Model name (yolov8n, yolov8s, yolov8m, yolov8l)
+            model_name (str): Model name (yolov8s, custom_trained)
             
         Returns:
             bool: True if model loaded successfully, False otherwise
