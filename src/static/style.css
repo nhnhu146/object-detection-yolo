@@ -76,7 +76,44 @@ body {
     align-items: center;
     gap: 1rem;
     font-weight: 700;
-    font-size: 1.5rem;
+    color: var(--primary-color);
+}
+
+.logo-text {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.3;
+}
+
+.brand-name {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: var(--primary-color);
+    font-family: 'Inter', 'Segoe UI', 'Roboto', sans-serif;
+    letter-spacing: -0.5px;
+    text-shadow: 0 2px 4px rgba(102, 126, 234, 0.1);
+    transition: var(--transition);
+}
+
+.logo:hover .brand-name {
+    transform: translateY(-1px);
+    text-shadow: 0 3px 6px rgba(102, 126, 234, 0.2);
+}
+
+.brand-slogan {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--light-text);
+    font-style: italic;
+    margin-top: -1px;
+    opacity: 0.85;
+    font-family: 'Inter', 'Georgia', serif;
+    letter-spacing: 0.3px;
+    transition: var(--transition);
+}
+
+.logo:hover .brand-slogan {
+    opacity: 1;
     color: var(--primary-color);
 }
 
@@ -90,6 +127,24 @@ body {
     justify-content: center;
     color: white;
     font-size: 1.5rem;
+    animation: pulse 2s ease-in-out infinite alternate;
+}
+
+.logo-svg {
+    width: 32px;
+    height: 32px;
+    filter: brightness(0) invert(1);
+    transition: var(--transition);
+}
+
+.logo:hover .logo-svg {
+    transform: scale(1.1);
+    filter: brightness(0) invert(1) drop-shadow(0 2px 4px rgba(255, 255, 255, 0.3));
+}
+
+@keyframes pulse {
+    from { transform: scale(1); }
+    to { transform: scale(1.05); }
 }
 
 .status-badge {
@@ -221,16 +276,16 @@ body {
 .model-icon {
     width: 40px;
     height: 40px;
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: var(--border-radius);
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 1.1rem;
+    border: none;
+    background: transparent;
 }
 
 .model-option.selected .model-icon {
-    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.1);
 }
 
 .model-details h4 {
@@ -243,17 +298,119 @@ body {
     opacity: 0.8;
 }
 
+.model-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+}
+
+.requirement-badge {
+    font-size: 0.7rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 20px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.req-1 {
+    background: rgba(102, 126, 234, 0.2);
+    color: var(--primary-color);
+}
+
+.model-option.selected .req-1 {
+    background: rgba(255, 255, 255, 0.3);
+    color: white;
+}
+
+.req-2 {
+    background: rgba(240, 147, 251, 0.2);
+    color: var(--warning-color);
+}
+
+.model-option.selected .req-2 {
+    background: rgba(255, 255, 255, 0.3);
+    color: white;
+}
+
+.class-preview {
+    margin: 0.5rem 0;
+    padding: 0.5rem;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 6px;
+    border-left: 3px solid var(--primary-color);
+}
+
+.model-option.selected .class-preview {
+    background: rgba(255, 255, 255, 0.1);
+    border-left-color: rgba(255, 255, 255, 0.5);
+}
+
+.class-preview small {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.model-specs {
+    display: flex;
+    gap: 1rem;
+    margin-top: 0.5rem;
+}
+
+.spec-item {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.8rem;
+    opacity: 0.7;
+}
+
+.model-loading, .model-error {
+    text-align: center;
+    padding: 2rem;
+    color: var(--light-text);
+}
+
+.model-switching {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 1rem;
+}
+
+.spinner {
+    width: 20px;
+    height: 20px;
+    border: 2px solid transparent;
+    border-top: 2px solid currentColor;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
 /* Upload Styles */
 .upload-zone {
     border: 3px dashed var(--border-color);
     border-radius: var(--border-radius-lg);
-    padding: 3rem 2rem;
+    padding: 3.5rem 2rem;
     text-align: center;
     cursor: pointer;
     transition: var(--transition);
     background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
     position: relative;
     overflow: hidden;
+    min-height: 220px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .upload-zone::before {
@@ -287,16 +444,16 @@ body {
 }
 
 .upload-icon {
-    width: 80px;
-    height: 80px;
+    width: 70px;
+    height: 70px;
     background: var(--accent-gradient);
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    margin: 0 auto 1.5rem;
+    margin: 0 auto 1.2rem;
     color: white;
-    font-size: 2rem;
+    font-size: 1.8rem;
     animation: float 3s ease-in-out infinite;
 }
 
@@ -306,7 +463,7 @@ body {
 }
 
 .upload-text {
-    font-size: 1.125rem;
+    font-size: 1.1rem;
     font-weight: 600;
     margin-bottom: 0.5rem;
     color: var(--dark-color);
@@ -314,7 +471,7 @@ body {
 
 .upload-hint {
     color: var(--light-text);
-    font-size: 0.875rem;
+    font-size: 0.85rem;
 }
 
 /* Button Styles */
@@ -540,12 +697,22 @@ body {
         padding: 1rem;
     }
     
+    .brand-name {
+        font-size: 1.4rem;
+        font-weight: 800;
+    }
+    
+    .brand-slogan {
+        font-size: 0.75rem;
+    }
+    
     .card {
         padding: 1.5rem;
     }
     
     .upload-zone {
-        padding: 2rem 1rem;
+        padding: 2.5rem 1.5rem;
+        min-height: 180px;
     }
     
     .preview-actions {

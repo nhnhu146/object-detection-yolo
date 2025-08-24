@@ -63,32 +63,46 @@ def health():
         'status': 'healthy',
         'model_loaded': detector.is_loaded(),
         'current_model': detector.current_model_name,
-        'app_name': 'YOLO Object Detection - Requirement 1',
+                        'app_name': 'LokWild - Look to Lock the Wild',
         'model_reused': True
     })
 
 @app.route('/api/models')
 def get_models():
-    """Get available YOLO models (Requirement 1: using available models)"""
+    """Get available YOLO models (Requirement 1 & 2: show both general and specialized models)"""
     available_models = []
     current_config = app.config.get('AVAILABLE_MODELS', {})
     
     for model_id, model_info in current_config.items():
-        available_models.append({
+        model_data = {
             'id': model_id,
             'name': model_info['name'],
             'description': model_info['description'],
             'size': model_info['size'],
             'speed': model_info['speed'],
             'file': model_info['file'],
-            'is_current': model_id == detector.current_model_name
-        })
+            'type': model_info['type'],
+            'requirement': model_info['requirement'],
+            'classes': model_info['classes'],
+            'is_current': model_id == detector.current_model_name,
+            'icon': model_info.get('icon', 'fas fa-brain'),
+            'color': model_info.get('color', '#667eea')
+        }
+        
+        # Add class names if available
+        if 'class_names' in model_info:
+            model_data['class_names'] = model_info['class_names']
+        if 'class_names_vi' in model_info:
+            model_data['class_names_vi'] = model_info['class_names_vi']
+            
+        available_models.append(model_data)
     
     return jsonify({
         'success': True,
         'models': available_models,
         'current_model': detector.current_model_name,
-        'model_loaded': detector.is_loaded()
+        'model_loaded': detector.is_loaded(),
+        'message': f'Tìm thấy {len(available_models)} models khả dụng'
     })
 
 @app.route('/api/switch_model', methods=['POST'])
@@ -102,17 +116,19 @@ def switch_model():
         model_name = data.get('model_name')
         
         if not model_name:
-            return jsonify({'error': 'Model name is required'}), 400
+            return jsonify({'error': 'Tên model không được để trống'}), 400
         
         available_models = app.config.get('AVAILABLE_MODELS', {})
         if model_name not in available_models:
-            return jsonify({'error': f'Model {model_name} not available'}), 400
+            return jsonify({'error': f'Model {model_name} không tồn tại'}), 400
+        
+        model_info = available_models[model_name]
         
         # Check if already using this model (avoid unnecessary reload)
         if detector.current_model_name == model_name:
             return jsonify({
                 'success': True,
-                'message': f'Already using {model_name}, no reload needed',
+                'message': f'Đã đổi sang {model_info["name"]}',
                 'model_name': model_name,
                 'reused': True
             })
@@ -122,13 +138,13 @@ def switch_model():
         if detector.switch_model(model_name):
             return jsonify({
                 'success': True,
-                'message': f'Successfully switched to {model_name}',
+                'message': f'Đã đổi sang {model_info["name"]}',
                 'model_name': model_name,
                 'previous_model': detector.current_model_name,
                 'reloaded': True
             })
         else:
-            return jsonify({'error': f'Failed to load {model_name}'}), 500
+            return jsonify({'error': f'Không thể tải {model_info["name"]}'}), 500
             
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -238,7 +254,7 @@ def cleanup_files():
 
 if __name__ == '__main__':
     print("\n" + "="*50)
-    print("🚀 YOLO Object Detection Web App - Requirement 1")
+    print("🚀 LokWild - Look to Lock the Wild")
     print("="*50)
     print(f"📊 Model loaded: {detector.current_model_name}")
     print(f"🔄 Model reuse: Enabled (as required)")

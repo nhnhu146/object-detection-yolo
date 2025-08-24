@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Object Detection Studio - YOLO Detection</title>
-    <meta name="description" content="Ứng dụng phát hiện đối tượng AI sử dụng YOLO - Upload hình ảnh và phát hiện objects với độ chính xác cao">
-    <meta name="keywords" content="AI, Object Detection, YOLO, Computer Vision, Machine Learning, Image Recognition">
-    <meta name="author" content="AI Object Detection Studio">
+    <title>LokWild - Look to Lock the Wild</title>
+    <meta name="description" content="LokWild - Look to Lock the Wild | Nền tảng phát hiện đối tượng thông minh với YOLOv8, từ vật thể thường ngày đến động vật hoang dã">
+    <meta name="keywords" content="LokWild, Wildlife Detection, AI Detection, YOLO, Computer Vision, Machine Learning">
+    <meta name="author" content="LokWild - Look to Lock the Wild">
     <meta name="theme-color" content="#667eea">
     
     <!-- Favicon -->
@@ -27,9 +27,12 @@
             <div class="header-content">
                 <div class="logo">
                     <div class="logo-icon">
-                        <i class="fas fa-robot"></i>
+                        <img src="/static/favicon.svg" alt="LokWild Logo" class="logo-svg">
                     </div>
-                    <span>AI Object Detection Studio</span>
+                    <div class="logo-text">
+                        <span class="brand-name">LokWild</span>
+                        <span class="brand-slogan">Look to Lock the Wild</span>
+                    </div>
                 </div>
                 
                 <div id="connectionStatus" class="status-badge status-online">
@@ -52,29 +55,11 @@
                         <h2 class="card-title">Chọn AI Model</h2>
                     </div>
                     
-                    <div class="model-selector">
-                        <div class="model-option selected" data-model="yolov8s">
-                            <div class="model-info">
-                                <div class="model-icon">
-                                    <i class="fas fa-bolt"></i>
-                                </div>
-                                <div class="model-details">
-                                    <h4>YOLOv8 Small</h4>
-                                    <p>Pre-trained model - Cân bằng tốc độ và độ chính xác</p>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="model-option" data-model="custom_trained">
-                            <div class="model-info">
-                                <div class="model-icon">
-                                    <i class="fas fa-star"></i>
-                                </div>
-                                <div class="model-details">
-                                    <h4>Custom Trained Model</h4>
-                                    <p>Model tùy chỉnh - Chuyên biệt cho đối tượng cụ thể</p>
-                                </div>
-                            </div>
+                    <div class="model-selector" id="modelSelector">
+                        <!-- Models will be loaded dynamically -->
+                        <div class="model-loading">
+                            <div class="spinner"></div>
+                            <span>Đang tải danh sách models...</span>
                         </div>
                     </div>
                 </div>
@@ -168,15 +153,17 @@
                 this.selectedModel = 'yolov8s';
                 this.currentFile = null;
                 this.isConnected = false;
+                this.availableModels = {};
                 
                 this.initElements();
                 this.initEventListeners();
                 this.checkConnection();
+                this.loadAvailableModels();
             }
             
             initElements() {
                 this.connectionStatus = document.getElementById('connectionStatus');
-                this.modelOptions = document.querySelectorAll('.model-option');
+                this.modelSelector = document.getElementById('modelSelector');
                 this.uploadZone = document.getElementById('uploadZone');
                 this.fileInput = document.getElementById('fileInput');
                 this.previewSection = document.getElementById('previewSection');
@@ -189,16 +176,122 @@
                 this.predictionsList = document.getElementById('predictionsList');
             }
             
-            initEventListeners() {
-                // Model selection
-                this.modelOptions.forEach(option => {
-                    option.addEventListener('click', () => {
-                        this.modelOptions.forEach(opt => opt.classList.remove('selected'));
-                        option.classList.add('selected');
-                        this.selectedModel = option.dataset.model;
+            async loadAvailableModels() {
+                try {
+                    const response = await fetch('/api/models');
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.success) {
+                            this.availableModels = {};
+                            data.models.forEach(model => {
+                                this.availableModels[model.id] = model;
+                            });
+                            this.renderModelSelector(data.models);
+                            this.selectedModel = data.current_model || 'yolov8s';
+                        }
+                    }
+                } catch (error) {
+                    console.error('Failed to load models:', error);
+                    this.renderModelError();
+                }
+            }
+            
+            renderModelSelector(models) {
+                const modelHTML = models.map(model => {
+                    const requirementBadge = model.requirement === 1 
+                        ? `<span class="requirement-badge req-1">Requirement 1</span>`
+                        : `<span class="requirement-badge req-2">Requirement 2</span>`;
+                    
+                    return `
+                        <div class="model-option ${model.is_current ? 'selected' : ''}" data-model="${model.id}">
+                            <div class="model-info">
+                                <div class="model-icon" style="color: ${model.color || '#667eea'};">
+                                    <i class="${model.icon || 'fas fa-brain'}"></i>
+                                </div>
+                                <div class="model-details">
+                                    <div class="model-header">
+                                        <h4>${model.name}</h4>
+                                        ${requirementBadge}
+                                    </div>
+                                    <p>${model.description}</p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                
+                this.modelSelector.innerHTML = modelHTML;
+                this.attachModelListeners();
+            }
+            
+            renderModelError() {
+                this.modelSelector.innerHTML = `
+                    <div class="model-error">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <p>Không thể tải danh sách models. Vui lòng kiểm tra kết nối.</p>
+                        <button onclick="location.reload()" class="btn btn-primary">Thử lại</button>
+                    </div>
+                `;
+            }
+            
+            attachModelListeners() {
+                const modelOptions = this.modelSelector.querySelectorAll('.model-option');
+                modelOptions.forEach(option => {
+                    option.addEventListener('click', async () => {
+                        const newModel = option.dataset.model;
+                        if (newModel !== this.selectedModel) {
+                            await this.switchModel(newModel, option);
+                        }
                     });
                 });
+            }
+            
+            async switchModel(newModel, optionElement) {
+                // Show loading state
+                const originalHTML = optionElement.innerHTML;
+                optionElement.innerHTML = `
+                    <div class="model-switching">
+                        <div class="spinner"></div>
+                        <span>Đang chuyển model...</span>
+                    </div>
+                `;
                 
+                try {
+                    const response = await fetch('/api/switch_model', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ model_name: newModel })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        // Update UI
+                        this.modelSelector.querySelectorAll('.model-option').forEach(opt => {
+                            opt.classList.remove('selected');
+                        });
+                        optionElement.classList.add('selected');
+                        this.selectedModel = newModel;
+                        
+                        // Show appropriate message based on response
+                        const message = data.reused 
+                            ? data.message 
+                            : data.message;
+                        this.showNotification(message, 'success');
+                    } else {
+                        throw new Error(data.error);
+                    }
+                } catch (error) {
+                    this.showNotification('Lỗi chuyển model: ' + error.message, 'error');
+                } finally {
+                    // Restore original content
+                    optionElement.innerHTML = originalHTML;
+                }
+            }
+            
+            initEventListeners() {
                 // Upload events
                 this.uploadZone.addEventListener('click', () => this.fileInput.click());
                 this.uploadZone.addEventListener('dragover', this.handleDragOver.bind(this));

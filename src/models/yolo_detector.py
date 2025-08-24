@@ -35,7 +35,7 @@ class YOLODetector:
         This follows the requirement: "model load only one time"
         
         Args:
-            model_name (str): Model name (yolov8s, custom_trained)
+            model_name (str): Model name (yolov8s, wild_animal)
             
         Returns:
             bool: True if model loaded successfully, False otherwise
@@ -48,8 +48,20 @@ class YOLODetector:
             
             logger.info(f"Loading YOLO model: {model_name}")
             
+            # Determine model file path
+            if model_name == "wild_animal":
+                # For requirement 2 - custom trained model
+                model_file = os.path.join("weights", "wild_animal_detector.pt")
+                if not os.path.exists(model_file):
+                    logger.warning(f"Custom model not found: {model_file}")
+                    logger.info("Using YOLOv8s as fallback until custom model is trained")
+                    model_file = "yolov8s.pt"
+                    model_name = "yolov8s"  # Fallback to general model
+            else:
+                # For requirement 1 - general pre-trained models
+                model_file = f"{model_name}.pt"
+            
             # Load YOLOv8 model (will auto-download if not exists)
-            model_file = f"{model_name}.pt"
             self.model = YOLO(model_file)
             
             # Store model info
@@ -226,6 +238,21 @@ class YOLODetector:
         if not self.is_model_loaded:
             return []
         return self.class_names.copy()
+    
+    def switch_model(self, new_model_name):
+        """
+        Switch to a different model
+        Args:
+            new_model_name (str): Name of the new model to load
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        if new_model_name == self.current_model_name:
+            logger.info(f"Already using model: {new_model_name}")
+            return True
+        
+        logger.info(f"Switching from {self.current_model_name} to {new_model_name}")
+        return self.load_model(new_model_name)
     
     def switch_model(self, new_model_name):
         """
