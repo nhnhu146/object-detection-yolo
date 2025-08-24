@@ -53,16 +53,10 @@ class YOLODetector:
                 # For requirement 2 - custom trained model
                 model_file = os.path.join("weights", "wild_animal_detector.pt")
                 if not os.path.exists(model_file):
-                    # Try alternative filename
-                    model_file_alt = os.path.join("weights", "best.pt")
-                    if os.path.exists(model_file_alt):
-                        logger.info(f"Using alternative wild_animal model: {model_file_alt}")
-                        model_file = model_file_alt
-                    else:
-                        logger.error(f"Custom model not found: {model_file}")
-                        logger.error(f"Alternative model not found: {model_file_alt}")
-                        logger.error("Please ensure wild_animal model is trained and saved in weights/ directory")
-                        return False
+                    logger.warning(f"Custom model not found: {model_file}")
+                    logger.info("Using YOLOv8s as fallback until custom model is trained")
+                    model_file = "yolov8s.pt"
+                    model_name = "yolov8s"  # Fallback to general model
             else:
                 # For requirement 1 - general pre-trained models
                 model_file = f"{model_name}.pt"
@@ -245,72 +239,29 @@ class YOLODetector:
             return []
         return self.class_names.copy()
     
-    def validate_class_names(self, expected_classes=None):
-        """
-        Validate that loaded model class names match expected classes
-        Args:
-            expected_classes (list): Expected class names from config
-        Returns:
-            dict: Validation result
-        """
-        if not self.is_model_loaded:
-            return {'valid': False, 'error': 'No model loaded'}
-        
-        model_classes = self.get_available_classes()
-        
-        if expected_classes is None:
-            return {
-                'valid': True, 
-                'model_classes': model_classes,
-                'message': 'No expected classes provided for comparison'
-            }
-        
-        if len(model_classes) != len(expected_classes):
-            return {
-                'valid': False,
-                'error': f'Class count mismatch: model={len(model_classes)}, expected={len(expected_classes)}',
-                'model_classes': model_classes,
-                'expected_classes': expected_classes
-            }
-        
-        mismatches = []
-        for i, (model_cls, expected_cls) in enumerate(zip(model_classes, expected_classes)):
-            if model_cls != expected_cls:
-                mismatches.append({
-                    'index': i,
-                    'model': model_cls,
-                    'expected': expected_cls
-                })
-        
-        return {
-            'valid': len(mismatches) == 0,
-            'mismatches': mismatches,
-            'model_classes': model_classes,
-            'expected_classes': expected_classes,
-            'message': 'All class names match' if len(mismatches) == 0 else f'{len(mismatches)} class name mismatches found'
-        }
-    
     def switch_model(self, new_model_name):
         """
         Switch to a different model
         Args:
             new_model_name (str): Name of the new model to load
         Returns:
-            dict: Result with success status and message
+            bool: True if successful, False otherwise
         """
         if new_model_name == self.current_model_name:
             logger.info(f"Already using model: {new_model_name}")
-            return {
-                'success': True, 
-                'message': f'Already using {new_model_name}',
-                'current_model': self.current_model_name
-            }
+            return True
         
         logger.info(f"Switching from {self.current_model_name} to {new_model_name}")
-        success = self.load_model(new_model_name)
+        return self.load_model(new_model_name)
+    
+    def switch_model(self, new_model_name):
+        """
+        Switch to a different model (this will reload)
+        Use sparingly as per requirement: only when model needs to be updated
+        """
+        if new_model_name == self.current_model_name:
+            logger.info(f"Already using {new_model_name}, no reload needed")
+            return True
         
-        return {
-            'success': success,
-            'message': f'Switched to {self.current_model_name}' if success else f'Failed to switch to {new_model_name}',
-            'current_model': self.current_model_name if success else None
-        }
+        logger.info(f"Switching from {self.current_model_name} to {new_model_name}")
+        return self.load_model(new_model_name)

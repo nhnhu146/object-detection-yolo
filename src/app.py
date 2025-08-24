@@ -63,73 +63,9 @@ def health():
         'status': 'healthy',
         'model_loaded': detector.is_loaded(),
         'current_model': detector.current_model_name,
-        'app_name': 'LokWild - Look to Lock the Wild',
+                        'app_name': 'LokWild - Look to Lock the Wild',
         'model_reused': True
     })
-
-@app.route('/api/debug/classes')
-def debug_classes():
-    """Debug endpoint to check class names consistency"""
-    try:
-        if not detector.is_loaded():
-            return jsonify({'error': 'No model loaded'}), 400
-        
-        current_model = detector.current_model_name
-        model_classes = detector.get_available_classes()
-        
-        # Get expected classes from config
-        config_models = app.config.get('AVAILABLE_MODELS', {})
-        expected_classes = config_models.get(current_model, {}).get('class_names', [])
-        
-        # Validate class names
-        validation = detector.validate_class_names(expected_classes)
-        
-        return jsonify({
-            'current_model': current_model,
-            'model_classes_count': len(model_classes),
-            'expected_classes_count': len(expected_classes),
-            'validation': validation,
-            'model_classes_sample': model_classes[:10] if model_classes else [],
-            'expected_classes_sample': expected_classes[:10] if expected_classes else [],
-            'model_info': detector.get_model_info()
-        })
-    
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/api/switch_model', methods=['POST'])
-def switch_model():
-    """Switch to a different model"""
-    try:
-        data = request.get_json()
-        if not data or 'model_name' not in data:
-            return jsonify({'error': 'Model name is required'}), 400
-        
-        model_name = data['model_name']
-        
-        # Validate model exists in config
-        available_models = app.config.get('AVAILABLE_MODELS', {})
-        if model_name not in available_models:
-            return jsonify({'error': f'Unknown model: {model_name}'}), 400
-        
-        # Switch model
-        result = detector.switch_model(model_name)
-        
-        if result['success']:
-            return jsonify({
-                'success': True,
-                'message': result['message'],
-                'current_model': result['current_model'],
-                'model_info': detector.get_model_info()
-            })
-        else:
-            return jsonify({
-                'success': False,
-                'error': result['message']
-            }), 500
-    
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/models')
 def get_models():
