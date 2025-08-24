@@ -50,23 +50,45 @@ class YOLODetector:
             
             # Determine model file path
             if model_name == "wild_animal":
-                # For requirement 2 - custom trained model
-                model_file = os.path.join("weights", "wild_animal_detector.pt")
-                if not os.path.exists(model_file):
-                    logger.warning(f"Custom model not found: {model_file}")
-                    logger.info("Using YOLOv8s as fallback until custom model is trained")
+                # For custom trained model - try multiple possible locations
+                possible_paths = [
+                    os.path.join("weights", "wild_animal_detector.pt"),
+                    os.path.join("weights", "best.pt"),
+                    "best.pt"
+                ]
+                
+                model_file = None
+                for path in possible_paths:
+                    if os.path.exists(path):
+                        model_file = path
+                        break
+                
+                if not model_file:
+                    logger.warning(f"Custom wildlife model not found in any location: {possible_paths}")
+                    logger.info("Using YOLOv8s as fallback until custom model is available")
                     model_file = "yolov8s.pt"
                     model_name = "yolov8s"  # Fallback to general model
             else:
-                # For requirement 1 - general pre-trained models
+                # For pre-trained models
                 model_file = f"{model_name}.pt"
             
             # Load YOLOv8 model (will auto-download if not exists)
             self.model = YOLO(model_file)
             
-            # Store model info
+            # Store model info and validate class names
             self.current_model_name = model_name
-            self.class_names = list(self.model.names.values())
+            
+            # Safe class names extraction with validation
+            try:
+                if hasattr(self.model, 'names') and self.model.names:
+                    self.class_names = list(self.model.names.values())
+                else:
+                    logger.warning(f"Model {model_name} has no class names, using empty list")
+                    self.class_names = []
+            except Exception as e:
+                logger.warning(f"Error extracting class names from {model_name}: {e}")
+                self.class_names = []
+            
             self.is_model_loaded = True
             
             logger.info(f"✅ Model loaded successfully: {model_name}")
@@ -128,7 +150,12 @@ class YOLODetector:
                     # Get confidence and class
                     conf = float(box.conf[0].cpu().numpy())
                     cls = int(box.cls[0].cpu().numpy())
-                    class_name = self.model.names[cls]
+                    
+                    # Safe class name retrieval with fallback
+                    try:
+                        class_name = self.model.names[cls] if cls in self.model.names else f"class_{cls}"
+                    except Exception:
+                        class_name = f"unknown_class_{cls}"
                     
                     # Calculate additional info
                     center_x = (x1 + x2) / 2
@@ -242,6 +269,8 @@ class YOLODetector:
     def switch_model(self, new_model_name):
         """
         Switch to a different model
+        Use sparingly as per requirement: only when model needs to be updated
+        
         Args:
             new_model_name (str): Name of the new model to load
         Returns:
@@ -249,18 +278,6 @@ class YOLODetector:
         """
         if new_model_name == self.current_model_name:
             logger.info(f"Already using model: {new_model_name}")
-            return True
-        
-        logger.info(f"Switching from {self.current_model_name} to {new_model_name}")
-        return self.load_model(new_model_name)
-    
-    def switch_model(self, new_model_name):
-        """
-        Switch to a different model (this will reload)
-        Use sparingly as per requirement: only when model needs to be updated
-        """
-        if new_model_name == self.current_model_name:
-            logger.info(f"Already using {new_model_name}, no reload needed")
             return True
         
         logger.info(f"Switching from {self.current_model_name} to {new_model_name}")
