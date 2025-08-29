@@ -31,12 +31,19 @@ print("🚀 Initializing YOLO Object Detection Web App...")
 # Global detector instance - Model will be loaded once and reused (Requirement 1)
 detector = YOLODetector()
 
+# Global fallback tracking
+fallback_warning = None
+
 # Load default model on startup (Requirement 1: model load only once)
 print(f"📥 Loading default model: {app.config.get('DEFAULT_MODEL', 'yolov8n')}")
 default_model = app.config.get('DEFAULT_MODEL', 'yolov8n')
 if detector.load_model(default_model):
     print(f"✅ Default model {default_model} loaded successfully!")
     print("🔄 This model will be reused for all detections (Requirement 1)")
+    # Check if fallback occurred during initial load
+    if hasattr(detector, 'last_fallback_info') and detector.last_fallback_info:
+        fallback_warning = detector.last_fallback_info
+        print(f"⚠️  FALLBACK WARNING: {fallback_warning}")
 else:
     print(f"❌ Failed to load default model: {default_model}")
     print("⚠️  Model will be loaded on first request")
@@ -58,14 +65,61 @@ def index():
 
 @app.route('/api/health')
 def health():
-    """Health check endpoint"""
-    return jsonify({
+    """Health check endpoint with fallback information"""
+    response_data = {
         'status': 'healthy',
         'model_loaded': detector.is_loaded(),
         'current_model': detector.current_model_name,
-                        'app_name': 'LokWild - Look to Lock the Wild',
+        'app_name': 'LokWild - Look to Lock the Wild',
         'model_reused': True
-    })
+    }
+    
+    # Check for fallback information
+    fallback_info = None
+    if fallback_warning:
+        fallback_info = fallback_warning
+    elif hasattr(detector, 'last_fallback_info') and detector.last_fallback_info:
+        fallback_info = detector.last_fallback_info
+    
+    # Add comprehensive fallback warning
+    if fallback_info:
+        response_data['fallback_warning'] = {
+            'active': True,
+            'severity': fallback_info.get('severity', 'WARNING'),
+            'title': 'Hệ thống đang sử dụng model dự phòng',
+            'message': f"Không tìm thấy {fallback_info.get('requested_file', 'best.pt')}, đang dùng {fallback_info.get('fallback_model', 'yolov8s')}",
+            'details': {
+                'requested_model': fallback_info.get('requested_model', 'wild_animal'),
+                'requested_file': fallback_info.get('requested_file', 'best.pt'),
+                'current_model': fallback_info.get('fallback_model', detector.current_model_name),
+                'current_file': fallback_info.get('fallback_file', 'yolov8s.pt'),
+                'reason': fallback_info.get('reason', 'Model tùy chỉnh không khả dụng'),
+                'searched_locations': len(fallback_info.get('searched_paths', [])),
+                'expected_classes': fallback_info.get('expected_classes', []),
+                'fallback_classes_count': fallback_info.get('fallback_classes_count', 80),
+                'timestamp': fallback_info.get('timestamp', 'N/A')
+            },
+            'impact': fallback_info.get('impact', {
+                'vi': 'Động vật hoang dã có thể bị phân loại sai',
+                'en': 'Wildlife animals may be misclassified'
+            }),
+            'solution': fallback_info.get('solution', {
+                'vi': 'Đặt file best.pt vào thư mục gốc của dự án',
+                'en': 'Place best.pt file in the project root directory'
+            }),
+            'type': 'error',
+            'dismissible': False,
+            'show_details': True
+        }
+        response_data['status'] = 'healthy_with_fallback'
+    else:
+        response_data['fallback_warning'] = {
+            'active': False,
+            'title': 'Hệ thống hoạt động bình thường',
+            'message': 'Model chuyên dụng cho động vật hoang dã đang hoạt động'
+        }
+    
+    return jsonify(response_data)
 
 @app.route('/api/models')
 def get_models():
@@ -169,14 +223,26 @@ def predict():
             return jsonify({'error': 'Invalid file type. Allowed: PNG, JPG, JPEG, GIF, BMP, WebP'}), 400
         
         # Check if model is loaded - auto load default if not loaded
+        fallback_occurred = False
+        fallback_message = None
+        
         if not detector.is_loaded():
             print(f"📥 No model loaded. Loading default model: {app.config.get('DEFAULT_MODEL', 'yolov8n')}")
             default_model = app.config.get('DEFAULT_MODEL', 'yolov8n')
             if not detector.load_model(default_model):
                 return jsonify({'error': f'Failed to load default model: {default_model}'}), 500
             print(f"✅ Default model {default_model} loaded successfully!")
+            
+            # Check if fallback occurred during load
+            if hasattr(detector, 'last_fallback_info') and detector.last_fallback_info:
+                fallback_occurred = True
+                fallback_message = detector.last_fallback_info
         else:
             print(f"🔄 Using already loaded model: {detector.current_model_name}")
+            # Check for existing fallback warning
+            if hasattr(detector, 'last_fallback_info') and detector.last_fallback_info:
+                fallback_occurred = True
+                fallback_message = detector.last_fallback_info
         
         # Save uploaded file
         print(f"💾 Saving uploaded file: {file.filename}")
@@ -217,7 +283,8 @@ def predict():
         print(f"✅ Detection completed: {len(result['predictions'])} objects found")
         print(f"🔄 Model {detector.current_model_name} was reused (not reloaded)")
         
-        return jsonify({
+        # Prepare response data
+        response_data = {
             'success': True,
             'predictions': result['predictions'],
             'result_image': f"data:image/jpeg;base64,{result_base64}",
@@ -227,7 +294,19 @@ def predict():
                 'filename': save_result['original_filename'],
                 'size': save_result['size']
             }
-        })
+        }
+        
+        # Add fallback warning if exists
+        if fallback_occurred and fallback_message:
+            response_data['fallback_warning'] = {
+                'message': 'Hệ thống đã chuyển sang model dự phòng',
+                'details': fallback_message,
+                'type': 'warning',
+                'show_user': True
+            }
+            print(f"⚠️ FALLBACK WARNING added to response: {fallback_message}")
+        
+        return jsonify(response_data)
         
     except Exception as e:
         print(f"❌ Prediction error: {str(e)}")
